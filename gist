@@ -1,0 +1,71 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use File::Basename;
+use Config::Tiny;
+use Getopt::Long;
+use JSON::XS;
+use LWP::UserAgent;
+use HTTP::Request::Common qw(POST);
+use Data::Dumper;
+
+my $GISTS = 'https://api.github.com/gists';
+my ($filename, $content, $description);
+my $prog = basename($0);
+
+my $cfg = Config::Tiny->read($ENV{HOME} . '/.gitconfig');
+my $r = GetOptions('description=s', \$description,
+		   'filename=s',    \$filename,		# from STDIN
+    );
+$r or usage();
+
+my $file = $ARGV[0];
+$filename = $file ? $file : ($filename ? $filename : undef);
+if ($file) {
+    open(my $fd, $file) or die $!;
+    $content = join('', <$fd>);
+    close($fd);
+} else {
+    $content = join('', <STDIN>);
+}
+post($filename, $content, $description);
+exit;
+
+sub usage {
+    print STDERR <<EOF;
+usage: $prog [-d description] [-f filename] [file]
+	-d/--description	file description
+	-f/--filename		specify filename
+EOF
+;
+    exit 1;
+}
+
+sub post {
+    my ($file, $content, $description) = @_;
+
+    my $data = {
+	description => $description,
+	public => 'true',
+	files => {
+	    $file => {
+		content => $content
+	    }
+	},
+    };
+    my $json = encode_json($data);
+    $json =~ s/"true"/true/g; # OMG!
+
+    my $ua  = LWP::UserAgent->new;
+    my $req = POST($GISTS, Content => $json);
+    $req->authorization_basic($cfg->{github}->{user}, $cfg->{github}->{password});
+    my $res = $ua->request($req);
+    if ($res->is_success) {
+	my $data = decode_json($res->content);
+	print $data->{url} . "\n";
+    } else {
+	print Dumper $res;
+    }
+}

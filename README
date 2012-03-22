@@ -1,0 +1,8 @@
+gist - Just push text to gist
+
+Copyright(C) Sharl Morlaroll <sharl@hauN.org>
+
+* License - Perl/Artistic
+
+$ gist -d description foo.pl
+$ cat foo.pl | gist -f foo.pl -d "the description for foo.pl"
