@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use utf8;
 
 use File::Basename;
 use Config::Tiny;
@@ -22,7 +23,7 @@ my $r = GetOptions('description=s', \$description,
 $r or usage();
 
 my $file = $ARGV[0];
-$filename = $file ? $file : ($filename ? $filename : undef);
+$filename = $file ? basename($file) : ($filename ? $filename : undef);
 if ($file) {
     open(my $fd, $file) or die $!;
     $content = join('', <$fd>);
@@ -57,6 +58,7 @@ sub post {
     };
     my $json = encode_json($data);
     $json =~ s/"true"/true/g; # OMG!
+    utf8::decode($json);
 
     my $ua  = LWP::UserAgent->new;
     my $req = POST($GISTS, Content => $json);
@@ -64,7 +66,7 @@ sub post {
     my $res = $ua->request($req);
     if ($res->is_success) {
 	my $data = decode_json($res->content);
-	print $data->{url} . "\n";
+	print $data->{html_url} . "\n";
     } else {
 	print Dumper $res;
     }
