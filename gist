@@ -13,12 +13,13 @@ use HTTP::Request::Common qw(POST);
 use Data::Dumper;
 
 my $GISTS = 'https://api.github.com/gists';
-my ($filename, $content, $description);
+my ($content, $description, $filename, $private);
 my $prog = basename($0);
 
 my $cfg = Config::Tiny->read($ENV{HOME} . '/.gitconfig');
 my $r = GetOptions('description=s', \$description,
 		   'filename=s',    \$filename,		# from STDIN
+		   'private',       \$private,
     );
 $r or usage();
 
@@ -31,25 +32,26 @@ if ($file) {
 } else {
     $content = join('', <STDIN>);
 }
-post($filename, $content, $description);
+post($filename, $content, $description, $private);
 exit;
 
 sub usage {
     print STDERR <<EOF;
-usage: $prog [-d description] [-f filename] [file]
+usage: $prog [-d description] [-f filename] [-p] [file]
 	-d/--description	file description
 	-f/--filename		specify filename
+	-p/--private		put file into private repository
 EOF
 ;
     exit 1;
 }
 
 sub post {
-    my ($file, $content, $description) = @_;
+    my ($file, $content, $description, $private) = @_;
 
     my $data = {
 	description => $description,
-	public => 'true',
+	public => $private ? JSON::XS::false : JSON::XS::true,
 	files => {
 	    $file => {
 		content => $content
@@ -57,7 +59,6 @@ sub post {
 	},
     };
     my $json = encode_json($data);
-    $json =~ s/"true"/true/g; # OMG!
     utf8::decode($json);
 
     my $ua  = LWP::UserAgent->new;
