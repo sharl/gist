@@ -12,19 +12,15 @@ use LWP::UserAgent;
 use HTTP::Request::Common qw(POST);
 use Data::Dumper;
 
-my $GISTS = 'https://api.github.com/gists';
 my ($content, $description, $filename, $private);
 my $prog = basename($0);
 
-my $cfg = Config::Tiny->read($ENV{HOME} . '/.gitconfig');
-my $r = GetOptions('description=s', \$description,
-		   'filename=s',    \$filename,		# from STDIN
-		   'private',       \$private,
-    );
-$r or usage();
+usage() unless GetOptions('description=s', \$description,
+			  'filename=s',    \$filename,		# from STDIN
+			  'private',       \$private,    );
 
 my $file = $ARGV[0];
-$filename = $file ? basename($file) : ($filename ? $filename : undef);
+$filename = $file ? basename($file) : ($filename ? $filename : '');
 if ($file) {
     open(my $fd, $file) or die $!;
     $content = join('', <$fd>);
@@ -32,8 +28,7 @@ if ($file) {
 } else {
     $content = join('', <STDIN>);
 }
-post($filename, $content, $description, $private);
-exit;
+post();
 
 sub usage {
     print STDERR <<EOF;
@@ -47,13 +42,11 @@ EOF
 }
 
 sub post {
-    my ($file, $content, $description, $private) = @_;
-
     my $data = {
 	description => $description,
 	public => $private ? JSON::XS::false : JSON::XS::true,
 	files => {
-	    $file => {
+	    $filename => {
 		content => $content
 	    }
 	},
@@ -61,9 +54,10 @@ sub post {
     my $json = encode_json($data);
     utf8::decode($json);
 
+    my $cfg = Config::Tiny->read($ENV{HOME} . '/.gitconfig');
     my $ua  = LWP::UserAgent->new;
-    my $req = POST($GISTS, Content => $json);
-    $req->authorization_basic($cfg->{github}->{user}, $cfg->{github}->{password});
+    my $req = POST('https://api.github.com/gists', Content => $json);
+    $req->authorization_basic($cfg->{github}{user}, $cfg->{github}{password});
     my $res = $ua->request($req);
     if ($res->is_success) {
 	my $data = decode_json($res->content);
