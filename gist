@@ -20,7 +20,7 @@ usage() unless GetOptions('description=s', \$description,
 			  'private',       \$private,    );
 
 my $file = $ARGV[0];
-$filename = $file ? basename($file) : ($filename ? $filename : '');
+$filename ||= $file ? basename($file) : ($filename ? $filename : '_');
 if ($file) {
     open(my $fd, $file) or die $!;
     $content = join('', <$fd>);
