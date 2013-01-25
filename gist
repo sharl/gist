@@ -12,15 +12,15 @@ use LWP::UserAgent;
 use HTTP::Request::Common qw(POST);
 use Data::Dumper;
 
-my ($content, $description, $filename, $private);
 my $prog = basename($0);
 
-usage() unless GetOptions('description=s', \$description,
-			  'filename=s',    \$filename,		# from STDIN
-			  'private',       \$private,    );
+usage() unless GetOptions('description=s', \my $description,
+			  'filename=s',    \my $filename,	# from STDIN
+			  'private',       \my $private,    );
 
 my $file = $ARGV[0];
 $filename ||= $file ? basename($file) : ($filename ? $filename : '_');
+my $content;
 if ($file) {
     open(my $fd, $file) or die $!;
     $content = join('', <$fd>);
